@@ -1,5 +1,6 @@
 import json
 import os
+import time
 from typing import Any
 
 from google import genai
@@ -135,15 +136,48 @@ Story structure:
 {json.dumps(preset['structure'], indent=2)}
 """.strip()
 
-    response = client.models.generate_content(
-        model="gemini-2.5-flash",
-        contents=prompt,
-        config=types.GenerateContentConfig(
-            response_mime_type="application/json",
-            temperature=0.85,
-            top_p=0.95,
-        ),
-    )
+    response = None
+    last_error: Exception | None = None
+    for attempt in range(1, 6):
+        try:
+            response = client.models.generate_content(
+                model="gemini-2.5-flash",
+                contents=prompt,
+                config=types.GenerateContentConfig(
+                    response_mime_type="application/json",
+                    temperature=0.85,
+                    top_p=0.95,
+                ),
+            )
+            break
+        except Exception as exc:
+            last_error = exc
+            message = str(exc).lower()
+            retryable = any(
+                marker in message
+                for marker in (
+                    "unavailable",
+                    "high demand",
+                    "resource exhausted",
+                    "rate limit",
+                    "timeout",
+                    "temporarily",
+                    "503",
+                    "429",
+                )
+            )
+            if not retryable or attempt == 5:
+                raise
+            sleep_seconds = min(90, 8 * attempt * attempt)
+            print(
+                f"Gemini request failed on attempt {attempt}/5; retrying in "
+                f"{sleep_seconds}s. Error: {exc}",
+                flush=True,
+            )
+            time.sleep(sleep_seconds)
+
+    if response is None:
+        raise RuntimeError(f"Gemini did not return a response. Last error: {last_error}")
 
     raw_text = _extract_response_text(response)
     try:
