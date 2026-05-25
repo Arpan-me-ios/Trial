@@ -39,6 +39,60 @@ NICHE_PRESETS: dict[str, dict[str, Any]] = {
 REQUIRED_KEYS = ("title", "hook", "body", "description", "tags")
 
 
+def _fallback_script(topic: str, video_type: str, niche: str, reason: Exception | None) -> dict[str, Any]:
+    print(
+        "Gemini generation unavailable after retries; using local fallback script. "
+        f"Reason: {reason}",
+        flush=True,
+    )
+    title = "He Thought I Would Never Check The Receipts"
+    hook = "He betrayed me in the one place he thought I would never look."
+
+    short_body = (
+        f"{hook} {topic} At first, I wanted to confront him immediately, but I stayed quiet "
+        "and opened every statement, message, invoice, and timestamp I could find. The pattern "
+        "was worse than I expected. He had been moving money, changing names, and telling everyone "
+        "I was the problem. So I did not yell. I built one clean folder with every receipt, sent it "
+        "to the people who actually had power, and waited. By morning, his story collapsed. He lost "
+        "the deal, had to repay what he took, and asked me why I ruined him. I told him the truth: "
+        "I only organized what he left behind."
+    )
+    long_body = (
+        f"{hook}\n\n{topic}\n\n"
+        "For weeks, the small details did not add up. The missing money was always explained away, "
+        "the strange messages were always called misunderstandings, and every question somehow became "
+        "my fault. I stopped arguing and started documenting. I saved bank records, screenshots, edit "
+        "history, calendar invites, and the one invoice he forgot to delete. Once I saw the whole picture, "
+        "I realized the betrayal was not emotional only. It was planned.\n\n"
+        "The revenge was simple because it was legal. I sent the evidence to the right people, asked for "
+        "everything in writing, and refused every private phone call. By the end of the week, the lies had "
+        "nowhere left to hide. He had to return the money, explain the paper trail, and watch the reputation "
+        "he borrowed from me disappear. The best part was that I never had to raise my voice. I just let the "
+        "receipts speak in the order he created them."
+    )
+
+    body = short_body if video_type == "short" else long_body
+    return {
+        "title": title,
+        "hook": hook,
+        "body": body,
+        "description": (
+            "A dramatic betrayal and ethical revenge story about receipts, timing, and the moment "
+            "a lie finally collapses."
+        ),
+        "tags": [
+            "betrayal story",
+            "revenge story",
+            "storytime",
+            "receipts",
+            "karma",
+            "dramatic story",
+            "youtube shorts",
+            niche,
+        ],
+    }
+
+
 def _extract_response_text(response: Any) -> str:
     text = getattr(response, "text", None)
     if isinstance(text, str) and text.strip():
@@ -166,8 +220,10 @@ Story structure:
                     "429",
                 )
             )
-            if not retryable or attempt == 5:
+            if not retryable:
                 raise
+            if attempt == 5:
+                return _fallback_script(topic, video_type, niche, exc)
             sleep_seconds = min(90, 8 * attempt * attempt)
             print(
                 f"Gemini request failed on attempt {attempt}/5; retrying in "
