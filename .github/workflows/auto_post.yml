@@ -1,0 +1,70 @@
+name: Auto Generate Two Shorts Daily
+
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: "0 4,16 * * *"
+
+jobs:
+  generate-short:
+    runs-on: ubuntu-latest
+    timeout-minutes: 55
+    env:
+      GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+      KOKORO_MODEL_URL: ${{ secrets.KOKORO_MODEL_URL }}
+      KOKORO_VOICES_URL: ${{ secrets.KOKORO_VOICES_URL }}
+      KOKORO_MODEL_SHA256: ${{ secrets.KOKORO_MODEL_SHA256 }}
+      KOKORO_VOICES_SHA256: ${{ secrets.KOKORO_VOICES_SHA256 }}
+      YOUTUBE_UPLOAD_DRY_RUN: ${{ secrets.YOUTUBE_UPLOAD_DRY_RUN }}
+      YOUTUBE_CLIENT_ID: ${{ secrets.YOUTUBE_CLIENT_ID }}
+      YOUTUBE_CLIENT_SECRET: ${{ secrets.YOUTUBE_CLIENT_SECRET }}
+      YOUTUBE_REFRESH_TOKEN: ${{ secrets.YOUTUBE_REFRESH_TOKEN }}
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+
+      - name: Install system media tools
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y ffmpeg fonts-dejavu-core
+
+      - name: Install dependencies
+        working-directory: yt_pipeline
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install -r requirements.txt
+
+      - name: Download Kokoro model assets
+        working-directory: yt_pipeline
+        run: |
+          mkdir -p models assets/audio assets/outputs assets/backgrounds/short assets/backgrounds/long
+          python scripts/model_downloader.py
+
+      - name: Validate Python modules
+        working-directory: yt_pipeline
+        run: |
+          python -m compileall pipeline.py scheduler.py scripts
+
+      - name: Generate short
+        working-directory: yt_pipeline
+        run: |
+          if [ -n "${YOUTUBE_REFRESH_TOKEN}" ] && [ -n "${YOUTUBE_CLIENT_ID}" ] && [ -n "${YOUTUBE_CLIENT_SECRET}" ]; then
+            YOUTUBE_UPLOAD_DRY_RUN=0 python pipeline.py --type short --auto --upload
+          else
+            YOUTUBE_UPLOAD_DRY_RUN=1 python pipeline.py --type short --auto
+          fi
+
+      - name: Upload generated video artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: generated-short-${{ github.run_id }}
+          path: |
+            yt_pipeline/assets/outputs/*.mp4
+            yt_pipeline/assets/outputs/*.json
+          retention-days: 7

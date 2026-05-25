@@ -1,0 +1,13 @@
+__pycache__/
+*.py[cod]
+
+# Local secrets
+yt_pipeline/client_secrets.json
+yt_pipeline/youtube_oauth_secrets.json
+
+# Generated media and model files
+yt_pipeline/assets/audio/
+yt_pipeline/assets/outputs/
+yt_pipeline/assets/backgrounds/short/*.mp4
+yt_pipeline/assets/backgrounds/long/*.mp4
+yt_pipeline/models/
