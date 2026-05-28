@@ -15,6 +15,7 @@ jobs:
       KOKORO_VOICES_URL: ${{ secrets.KOKORO_VOICES_URL }}
       KOKORO_MODEL_SHA256: ${{ secrets.KOKORO_MODEL_SHA256 }}
       KOKORO_VOICES_SHA256: ${{ secrets.KOKORO_VOICES_SHA256 }}
+      DEFAULT_GAMEPLAY_VIDEO_URLS: https://cdn.revid.ai/subway_surfers/china_surfer_low.mp4
       GAMEPLAY_VIDEO_URLS: ${{ secrets.GAMEPLAY_VIDEO_URLS }}
       PEXELS_API_KEY: ${{ secrets.PEXELS_API_KEY }}
       YOUTUBE_UPLOAD_DRY_RUN: ${{ secrets.YOUTUBE_UPLOAD_DRY_RUN }}
@@ -51,6 +52,9 @@ jobs:
       - name: Download free stock gameplay backgrounds
         working-directory: yt_pipeline
         run: |
+          if [ -z "${GAMEPLAY_VIDEO_URLS}" ]; then
+            export GAMEPLAY_VIDEO_URLS="${DEFAULT_GAMEPLAY_VIDEO_URLS}"
+          fi
           if [ -n "${GAMEPLAY_VIDEO_URLS}" ] || [ -n "${PEXELS_API_KEY}" ]; then
             VIDEO_TYPE=short python scripts/stock_video_downloader.py
           else
