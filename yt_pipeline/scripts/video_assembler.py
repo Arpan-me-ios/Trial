@@ -56,6 +56,24 @@ def _available_backgrounds(directory: Path) -> list[Path]:
     return files
 
 
+def _prioritized_backgrounds(files: list[Path]) -> list[Path]:
+    direct_gameplay = [path for path in files if path.name.startswith("gameplay_direct_")]
+    stock_gameplay = [path for path in files if path.name.startswith("stock_pexels_")]
+    other_real_videos = [
+        path
+        for path in files
+        if not path.name.startswith("gameplay_direct_")
+        and not path.name.startswith("stock_pexels_")
+        and not path.name.startswith("generated_")
+    ]
+    generated_videos = [path for path in files if path.name.startswith("generated_")]
+
+    for group in (direct_gameplay, stock_gameplay, other_real_videos, generated_videos):
+        if group:
+            return group
+    return []
+
+
 def _loop_to_duration(background_path: Path, target_duration: float):
     base_clip = VideoFileClip(str(background_path))
     base_duration = _clip_duration(base_clip)
@@ -85,12 +103,14 @@ def assemble_video_base(audio_path: str, video_type: str) -> str:
 
     background_dir = PROJECT_ROOT / "assets" / "backgrounds" / video_type
     backgrounds = _available_backgrounds(background_dir)
-    if not backgrounds:
+    prioritized_backgrounds = _prioritized_backgrounds(backgrounds)
+    if not prioritized_backgrounds:
         ensure_generated_backgrounds(video_type=video_type, minimum_count=1)
         backgrounds = _available_backgrounds(background_dir)
-    if not backgrounds:
+        prioritized_backgrounds = _prioritized_backgrounds(backgrounds)
+    if not prioritized_backgrounds:
         raise FileNotFoundError(f"Could not create or find background videos in {background_dir}.")
-    background_path = random.choice(backgrounds)
+    background_path = random.choice(prioritized_backgrounds)
 
     output_dir = PROJECT_ROOT / "assets" / "outputs"
     output_dir.mkdir(parents=True, exist_ok=True)

@@ -10,14 +10,16 @@ from urllib.request import Request, urlopen
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
 PEXELS_SEARCH_URL = "https://api.pexels.com/videos/search"
 SAFE_GAMEPLAY_QUERIES = [
+    "mobile runner game",
+    "parkour game",
+    "arcade runner",
+    "racing gameplay",
+    "open world game",
+    "car chase game",
     "mobile game",
     "arcade game",
+    "gaming screen",
     "video game",
-    "gaming",
-    "racing game",
-    "runner game",
-    "game controller",
-    "esports",
 ]
 
 
@@ -49,6 +51,37 @@ def _download_file(url: str, destination: Path) -> None:
     except URLError as exc:
         raise RuntimeError(f"Stock video download failed: {exc.reason}") from exc
     temporary_path.replace(destination)
+
+
+def _direct_urls_from_env() -> list[str]:
+    raw_urls = os.getenv("GAMEPLAY_VIDEO_URLS", "")
+    normalized = raw_urls.replace("\r", "\n").replace(",", "\n").replace(";", "\n")
+    return [url.strip() for url in normalized.splitlines() if url.strip()]
+
+
+def download_direct_gameplay_backgrounds(video_type: str = "short") -> list[Path]:
+    if video_type not in {"short", "long"}:
+        raise ValueError("video_type must be either 'short' or 'long'.")
+
+    urls = _direct_urls_from_env()
+    if not urls:
+        print("GAMEPLAY_VIDEO_URLS is not set; skipping direct gameplay video downloads.", flush=True)
+        return []
+
+    directory = PROJECT_ROOT / "assets" / "backgrounds" / video_type
+    directory.mkdir(parents=True, exist_ok=True)
+    downloaded: list[Path] = []
+
+    for index, url in enumerate(urls, start=1):
+        output_path = directory / f"gameplay_direct_{index:03d}.mp4"
+        if output_path.exists() and output_path.stat().st_size > 0:
+            downloaded.append(output_path)
+            continue
+        _download_file(url, output_path)
+        downloaded.append(output_path)
+        print(f"Downloaded direct gameplay background: {output_path.name}", flush=True)
+
+    return downloaded
 
 
 def _best_video_file(video: dict, prefer_portrait: bool) -> dict | None:
@@ -142,5 +175,8 @@ def download_pexels_gameplay_backgrounds(video_type: str = "short", minimum_coun
 
 
 if __name__ == "__main__":
-    clips = download_pexels_gameplay_backgrounds(video_type=os.getenv("VIDEO_TYPE", "short"))
-    print(f"Ready stock clips: {len(clips)}")
+    selected_video_type = os.getenv("VIDEO_TYPE", "short")
+    direct_clips = download_direct_gameplay_backgrounds(video_type=selected_video_type)
+    stock_clips = download_pexels_gameplay_backgrounds(video_type=selected_video_type)
+    print(f"Ready direct gameplay clips: {len(direct_clips)}")
+    print(f"Ready stock gameplay clips: {len(stock_clips)}")

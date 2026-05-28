@@ -15,6 +15,7 @@ jobs:
       KOKORO_VOICES_URL: ${{ secrets.KOKORO_VOICES_URL }}
       KOKORO_MODEL_SHA256: ${{ secrets.KOKORO_MODEL_SHA256 }}
       KOKORO_VOICES_SHA256: ${{ secrets.KOKORO_VOICES_SHA256 }}
+      GAMEPLAY_VIDEO_URLS: ${{ secrets.GAMEPLAY_VIDEO_URLS }}
       PEXELS_API_KEY: ${{ secrets.PEXELS_API_KEY }}
       YOUTUBE_UPLOAD_DRY_RUN: ${{ secrets.YOUTUBE_UPLOAD_DRY_RUN }}
       YOUTUBE_CLIENT_ID: ${{ secrets.YOUTUBE_CLIENT_ID }}
@@ -50,10 +51,10 @@ jobs:
       - name: Download free stock gameplay backgrounds
         working-directory: yt_pipeline
         run: |
-          if [ -n "${PEXELS_API_KEY}" ]; then
+          if [ -n "${GAMEPLAY_VIDEO_URLS}" ] || [ -n "${PEXELS_API_KEY}" ]; then
             VIDEO_TYPE=short python scripts/stock_video_downloader.py
           else
-            echo "PEXELS_API_KEY is not set; generated gameplay backgrounds will be used."
+            echo "No gameplay video URLs or Pexels key set; generated gameplay backgrounds will be used."
           fi
 
       - name: Validate Python modules
