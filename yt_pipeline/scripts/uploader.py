@@ -54,6 +54,11 @@ def upload_to_youtube(video_path: str, metadata: dict[str, Any]):
         tags = [tag.strip().lstrip("#") for tag in raw_tags.split(",") if tag.strip()]
     else:
         tags = [str(tag).strip().lstrip("#") for tag in raw_tags if str(tag).strip()]
+    privacy_status = os.getenv("YOUTUBE_PRIVACY_STATUS", "public").strip().lower()
+    if privacy_status not in {"public", "private", "unlisted"}:
+        raise ValueError(
+            "YOUTUBE_PRIVACY_STATUS must be one of: public, private, unlisted."
+        )
 
     if os.getenv("YOUTUBE_UPLOAD_DRY_RUN", "1") == "1":
         return {
@@ -67,7 +72,7 @@ def upload_to_youtube(video_path: str, metadata: dict[str, Any]):
                     "categoryId": "22",
                 },
                 "status": {
-                    "privacyStatus": "private",
+                    "privacyStatus": privacy_status,
                     "selfDeclaredMadeForKids": False,
                 },
             },
@@ -86,7 +91,7 @@ def upload_to_youtube(video_path: str, metadata: dict[str, Any]):
                 "categoryId": "22",
             },
             "status": {
-                "privacyStatus": "private",
+                "privacyStatus": privacy_status,
                 "selfDeclaredMadeForKids": False,
             },
         },
