@@ -1,0 +1,41 @@
+name: Auto Post Pipeline Check
+
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: "0 */6 * * *"
+
+jobs:
+  pipeline-check:
+    runs-on: ubuntu-latest
+    env:
+      GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+      YOUTUBE_UPLOAD_DRY_RUN: "1"
+      YOUTUBE_PRIVACY_STATUS: "public"
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+
+      - name: Install dependencies
+        working-directory: yt_pipeline
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install -r requirements.txt
+
+      - name: Prepare headless asset directories
+        working-directory: yt_pipeline
+        run: |
+          mkdir -p models assets/audio assets/outputs assets/backgrounds/short assets/backgrounds/long
+          echo "GitHub Actions validates code and dry-run upload configuration only."
+
+      - name: Validate Python modules
+        working-directory: yt_pipeline
+        run: |
+          python -m compileall pipeline.py scheduler.py scripts
+          python pipeline.py --check

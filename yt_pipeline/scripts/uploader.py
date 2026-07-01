@@ -1,3 +1,4 @@
+import json
 import os
 from pathlib import Path
 from typing import Any
@@ -7,16 +8,33 @@ from googleapiclient.discovery import build
 from googleapiclient.http import MediaFileUpload
 from google_auth_oauthlib.flow import InstalledAppFlow
 
+from scripts.env_loader import load_local_env
+
 
 SCOPES = ["https://www.googleapis.com/auth/youtube.upload"]
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
+LOCAL_OAUTH_SECRETS_PATH = PROJECT_ROOT / "youtube_oauth_secrets.json"
+
+
+def _local_oauth_value(key: str) -> str:
+    if os.getenv(key):
+        return os.getenv(key, "")
+    if not LOCAL_OAUTH_SECRETS_PATH.exists():
+        return ""
+    try:
+        payload = json.loads(LOCAL_OAUTH_SECRETS_PATH.read_text(encoding="utf-8"))
+    except (json.JSONDecodeError, OSError):
+        return ""
+    value = payload.get(key, "")
+    return str(value) if value else ""
 
 
 def _load_credentials():
-    refresh_token = os.getenv("YOUTUBE_REFRESH_TOKEN")
-    client_id = os.getenv("YOUTUBE_CLIENT_ID")
-    client_secret = os.getenv("YOUTUBE_CLIENT_SECRET")
-    token_uri = os.getenv("YOUTUBE_TOKEN_URI", "https://oauth2.googleapis.com/token")
+    load_local_env()
+    refresh_token = _local_oauth_value("YOUTUBE_REFRESH_TOKEN")
+    client_id = _local_oauth_value("YOUTUBE_CLIENT_ID")
+    client_secret = _local_oauth_value("YOUTUBE_CLIENT_SECRET")
+    token_uri = _local_oauth_value("YOUTUBE_TOKEN_URI") or "https://oauth2.googleapis.com/token"
     if refresh_token and client_id and client_secret:
         return Credentials(
             token=None,
@@ -43,6 +61,7 @@ def _load_credentials():
 
 
 def upload_to_youtube(video_path: str, metadata: dict[str, Any]):
+    load_local_env()
     path = Path(video_path)
     if not path.exists():
         raise FileNotFoundError(f"Video file does not exist: {path}")

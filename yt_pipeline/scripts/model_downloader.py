@@ -8,6 +8,14 @@ from urllib.request import Request, urlopen
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
 MODEL_PATH = PROJECT_ROOT / "models" / "kokoro-v1.0.onnx"
 VOICES_PATH = PROJECT_ROOT / "models" / "voices-v1.0.bin"
+DEFAULT_MODEL_URL = (
+    "https://github.com/thewh1teagle/kokoro-onnx/releases/download/"
+    "model-files-v1.0/kokoro-v1.0.onnx"
+)
+DEFAULT_VOICES_URL = (
+    "https://github.com/thewh1teagle/kokoro-onnx/releases/download/"
+    "model-files-v1.0/voices-v1.0.bin"
+)
 
 
 def _download_file(url: str, destination: Path) -> None:
@@ -53,8 +61,8 @@ def _verify_checksum(path: Path, expected_hash: str | None) -> None:
 
 
 def ensure_kokoro_models() -> None:
-    model_url = os.getenv("KOKORO_MODEL_URL")
-    voices_url = os.getenv("KOKORO_VOICES_URL")
+    model_url = os.getenv("KOKORO_MODEL_URL", DEFAULT_MODEL_URL)
+    voices_url = os.getenv("KOKORO_VOICES_URL", DEFAULT_VOICES_URL)
     model_sha256 = os.getenv("KOKORO_MODEL_SHA256")
     voices_sha256 = os.getenv("KOKORO_VOICES_SHA256")
 
